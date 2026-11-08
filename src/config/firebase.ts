@@ -1,20 +1,19 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// Pega aquí la configuración que te da Firebase en la consola web
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_AUTH_DOMAIN",
-  projectId: "TU_PROJECT_ID",
-  storageBucket: "TU_STORAGE_BUCKET",
-  messagingSenderId: "TU_MESSAGING_SENDER_ID",
-  appId: "TU_APP_ID"
+  apiKey: "AIzaSyCMIOhxwcXEqbAnie@m1mbyUIpwDNBYeuA",
+  authDomain: "naturalsv-mobile.firebaseapp.com",
+  projectId: "naturalsv-mobile",
+  storageBucket: "naturalsv-mobile.firebasestorage.app",
+  messagingSenderId: "380942880440",
+  appId: "1:380942880440:web:a5d0b46efb1f5b2eebee4d",
+  measurementId: "G-B7MK7WJG9C"
 };
 
-// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 
-// Exportar los servicios para usarlos en tus pantallas
-export const auth = getAuth(app);
+// Inicialización limpia evitando el conflicto de tipos de persistencia en el editor
+export const auth = initializeAuth(app);
 export const db = getFirestore(app);

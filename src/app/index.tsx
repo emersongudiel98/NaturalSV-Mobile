@@ -1,17 +1,24 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+
 import {
-  StyleSheet,
-  Text,
-  View,
-  TextInput,
-  TouchableOpacity,
   Alert,
   SafeAreaView,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import UsuariosScreen from './usuarios';
+import ClientesScreen from './clientes';
+import ProductosScreen from './productos';
+import ComprasScreen from './compras';
 
 export default function App() {
-  const [screen, setScreen] = useState<'login' | 'menu'>('login');
+  const [screen, setScreen] = useState<
+  'login' | 'menu' | 'usuarios' | 'clientes' | 'productos' |'compras'
+>('login');
   
   // Estados para Login y Validaciones
   const [usuario, setUsuario] = useState('');
@@ -37,6 +44,21 @@ export default function App() {
     setPassword('');
     setScreen('login');
   };
+  if (screen === 'usuarios') {
+    return <UsuariosScreen onRegresar={() => setScreen('menu')} />;
+  }
+
+  if (screen === 'clientes') {
+    return <ClientesScreen onRegresar={() => setScreen('menu')} />;
+  }
+
+  if (screen === 'productos') {
+  return <ProductosScreen onRegresar={() => setScreen('menu')} />;
+  }
+
+  if (screen === 'compras') {
+    return <ComprasScreen onRegresar={() => setScreen('menu')}/>
+  }
 
   if (screen === 'menu') {
     return (
@@ -48,21 +70,26 @@ export default function App() {
           <Text style={styles.menuTitle}>Menu</Text>
 
           <View style={styles.menuButtonsGroup}>
-            <TouchableOpacity style={styles.btnMenuOption}>
+            <TouchableOpacity
+              style={styles.btnMenuOption}
+              onPress={() => setScreen('clientes')}>
               <Text style={styles.btnMenuOptionText}>Clientes</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.btnMenuOption}>
+            <TouchableOpacity style={styles.btnMenuOption}
+              onPress={() => setScreen('compras')}>
               <Text style={styles.btnMenuOptionText}>Compras</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.btnMenuOption}>
+            <TouchableOpacity
+              style={styles.btnMenuOption}
+              onPress={() => setScreen('productos')}>
               <Text style={styles.btnMenuOptionText}>Productos</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.btnMenuOption}>
-              <Text style={styles.btnMenuOptionText}>Usuarios</Text>
-            </TouchableOpacity>
+          <TouchableOpacity style={styles.btnMenuOption} onPress={() => setScreen('usuarios')}>
+            <Text style={styles.btnMenuOptionText}>Usuarios</Text>
+          </TouchableOpacity>
           </View>
 
           <TouchableOpacity style={styles.btnLogout} onPress={handleLogout}>
@@ -72,7 +99,7 @@ export default function App() {
           {/* Adorno inferior verde de Figma */}
           <View style={styles.bottomShape} />
         </View>
-      </SafeAreaView>
+      </SafeAreaView> 
     );
   }
 
