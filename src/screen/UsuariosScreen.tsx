@@ -1,67 +1,199 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { auth, db } from '../config/firebase';
-
-export default function UsuariosScreen({ onVolver }: { onVolver: () => void }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [nombre, setNombre] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
-
-  const handleAuthAction = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Por favor complete todos los campos requeridos.');
-      return;
-    }
-    try {
-      if (isRegistering) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          nombre: nombre,
-          email: email,
-          rol: 'Operador',
-          fechaCreacion: new Date().toISOString()
-        });
-        Alert.alert('Éxito', 'Usuario registrado y almacenado en Firestore.');
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-        Alert.alert('Éxito', 'Sesión iniciada correctamente.');
-      }
-    } catch (error: any) {
-      Alert.alert('Error de Autenticación', error.message);
-    }
-  };
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{isRegistering ? 'Registro de Usuario' : 'Iniciar Sesión'}</Text>
-      {isRegistering && (
-        <TextInput style={styles.input} placeholder="Nombre completo" placeholderTextColor="#8C8C98" value={nombre} onChangeText={setNombre} />
-      )}
-      <TextInput style={styles.input} placeholder="Correo electrónico" placeholderTextColor="#8C8C98" autoCapitalize="none" value={email} onChangeText={setEmail} />
-      <TextInput style={styles.input} placeholder="Contraseña" placeholderTextColor="#8C8C98" secureTextEntry value={password} onChangeText={setPassword} />
-      <TouchableOpacity style={styles.button} onPress={handleAuthAction}>
-        <Text style={styles.buttonText}>{isRegistering ? 'Registrarse' : 'Entrar'}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => setIsRegistering(!isRegistering)}>
-        <Text style={styles.switchText}>{isRegistering ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={[styles.button, { backgroundColor: '#8C8C98', marginTop: 20 }]} onPress={onVolver}>
-        <Text style={styles.buttonText}>Regresar al Menú</Text>
-      </TouchableOpacity>
-    </View>
-  );
+TypeScript
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { db } from "../config/firebase";
+export interface UsuarioItem {
+id: string;
+nombre: string;
+correo: string;
+rol: string;
+activo: boolean;
 }
-
+export default function UsuariosScreen() {
+const [usuarios, setUsuarios] = useState<UsuarioItem[]>([]);
+const [nombre, setNombre] = useState("");
+const [correo, setCorreo] = useState("");
+const [rol, setRol] = useState("Operador");
+const [editId, setEditId] = useState<string | null>(null);
+const [loading, setLoading] = useState(true);
+const [saving, setSaving] = useState(false);
+useEffect(() => {
+const q = query(collection(db, "usuarios"), orderBy("nombre", "asc"));
+const unsubscribe = onSnapshot(
+q,
+(snapshot) => {
+const rows: UsuarioItem[] = snapshot.docs.map((d) => ({
+id: d.id,
+nombre: String(d.data().nombre ?? ""),
+correo: String(d.data().correo ?? ""),
+rol: String(d.data().rol ?? "Operador"),
+activo: Boolean(d.data().activo ?? true),
+}));
+setUsuarios(rows);
+setLoading(false);
+},
+(err) => {
+console.error(err);
+Alert.alert("Error", "No se pudieron cargar los usuarios.");
+setLoading(false);
+}
+);
+return () => unsubscribe();
+}, []);
+const limpiarFormulario = () => {
+setNombre("");
+setCorreo("");
+setRol("Operador");
+setEditId(null);
+};
+const guardarUsuario = async () => {
+if (!nombre.trim() || !correo.trim()) {
+Alert.alert("Campos requeridos", "Ingresa nombre y correo.");
+return;
+}
+setSaving(true);
+try {
+if (editId) {
+await updateDoc(doc(db, "usuarios", editId), {
+nombre: nombre.trim(),
+correo: correo.trim().toLowerCase(),
+rol: rol.trim() || "Operador",
+});
+} else {
+await addDoc(collection(db, "usuarios"), {
+nombre: nombre.trim(),
+correo: correo.trim().toLowerCase(),
+rol: rol.trim() || "Operador",
+activo: true,
+creadoEn: serverTimestamp(),
+});
+}
+limpiarFormulario();
+} catch (err) {
+console.error(err);
+Alert.alert("Error", "No se pudo guardar el usuario.");
+} finally {
+setSaving(false);
+}
+};
+const eliminarUsuario = async (id: string) => {
+try {
+await deleteDoc(doc(db, "usuarios", id));
+} catch (err) {
+console.error(err);
+Alert.alert("Error", "No se pudo eliminar el usuario.");
+}
+};
+return (
+<View style={styles.container}>
+<Text style={styles.title}>Gestión de Usuarios</Text>
+<TextInput
+style={styles.input}
+placeholder="Nombre completo"
+value={nombre}
+onChangeText={setNombre}
+/>
+<TextInput
+style={styles.input}
+placeholder="Correo electrónico"
+keyboardType="email-address"
+autoCapitalize="none"
+value={correo}
+onChangeText={setCorreo}
+/>
+<TextInput
+style={styles.input}
+placeholder="Rol (Ej. Administrador, Operador)"
+value={rol}
+onChangeText={setRol}
+/>
+<TouchableOpacity style={styles.btn} onPress={guardarUsuario}
+disabled={saving}>
+<Text style={styles.btnText}>
+{saving ? "Guardando..." : editId ? "Actualizar Usuario" : "Agregar Usuario"}
+</Text>
+</TouchableOpacity>
+{loading ? (
+<ActivityIndicator style={{ marginTop: 20 }} />
+) : (
+<FlatList
+data={usuarios}
+keyExtractor={(item) => item.id}
+renderItem={({ item }) => (
+<View style={styles.card}>
+<View style={{ flex: 1 }}>
+<Text style={styles.name}>{item.nombre}</Text>
+<Text>{item.correo} • {item.rol}</Text>
+</View>
+<TouchableOpacity
+onPress={() => {
+setEditId(item.id);
+setNombre(item.nombre);
+setCorreo(item.correo);
+setRol(item.rol);
+}}
+>
+<Text style={styles.edit}>Editar</Text>
+</TouchableOpacity>
+<TouchableOpacity onPress={() => eliminarUsuario(item.id)}>
+<Text style={styles.del}>Borrar</Text>
+</TouchableOpacity>
+</View>
+)}
+/>
+)}
+</View>
+);
+}
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: 'center', backgroundColor: '#F4F4F0' },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#333' },
-  input: { backgroundColor: '#FFF', padding: 15, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#DDD' },
-  button: { backgroundColor: '#4A5D4E', padding: 15, borderRadius: 8, alignItems: 'center' },
-  buttonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-  switchText: { marginTop: 15, textAlign: 'center', color: '#2A3B2E' }
+container: { flex: 1, padding: 16, backgroundColor: "#F6F5F0" },
+title: { fontSize: 20, fontWeight: "700", marginBottom: 12 },
+input: {
+backgroundColor: "#FFF",
+borderRadius: 8,
+padding: 10,
+marginBottom: 8,
+borderWidth: 1,
+borderColor: "#DDD",
+},
+btn: {
+backgroundColor: "#3E5F2A",
+padding: 12,
+borderRadius: 8,
+alignItems: "center",
+marginBottom: 12,
+},
+btnText: { color: "#FFF", fontWeight: "700" },
+card: {
+flexDirection: "row",
+alignItems: "center",
+backgroundColor: "#FFF",
+padding: 12,
+borderRadius: 8,
+marginBottom: 8,
+gap: 10,
+},
+name: { fontWeight: "700", fontSize: 15 },
+edit: { color: "#1E56A0", fontWeight: "600" },
+del: { color: "#B02A37", fontWeight: "600" },
 });
